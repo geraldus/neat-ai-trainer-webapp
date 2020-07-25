@@ -19,7 +19,7 @@ populationCoefficient :: Int
 populationCoefficient = 4
 
 populationSize :: Integer
-populationSize = fromIntegral populationCoefficient * 1
+populationSize = fromIntegral populationCoefficient * 300
 
 
 -- * Solution
@@ -164,7 +164,7 @@ deactivateSANodes g keep = g { nodes = nodes' }
 --   Returns result of grouping paired with unused connections (genes).
 groupNodeCons ::
     (Node -> Gene -> Bool) -> [Node] -> [Gene] -> Bool -> ([(Node, [Gene])], [Gene])
-groupNodeCons cond' nodes cons' allowEmpty = foldl step ([], cons') nodes
+groupNodeCons cond' ns cons' allowEmpty = foldl step ([], cons') ns
   where
     step (acc, cs) n =
         let (nCons, rest) = partition (cond' n) cs

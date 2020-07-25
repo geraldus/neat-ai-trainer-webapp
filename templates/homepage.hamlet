@@ -1,0 +1,25 @@
+<div .masthead>
+    <div .container>
+        <div .row>
+            <h1 .header>
+                Yesod—a modern framework for blazing fast websites
+            <h2>
+                Fast, stable & spiced with great community
+            <form method=post action=@{RunNewPopR}>
+                <button #run-button .btn.btn-info.btn-lg>
+                    Run
+
+<script>
+    \$(document).ready(() => {
+        console.log('ready')
+        const b = $('#run-button')
+        b.click((e) => {
+            e.preventDefault()
+            \$.post(`@{RunNewPopR}`)
+        })
+
+        const ws = new WebSocket('ws://localhost:3000/notice/species-update')
+        ws.onmessage = (e) => {
+            console.log('>>>', JSON.parse(e.data))
+        }
+    })

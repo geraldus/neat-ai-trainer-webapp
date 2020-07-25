@@ -1,0 +1,34 @@
+<svg width="210mm" height="297mm" version="1.1" viewBox="0 0 210 297" xmlns="http://www.w3.org/2000/svg">
+ <circle cx="75.973" cy="139.01" r="38.932" fill-opacity="0" stroke="#855c5c" stroke-width="6.965"/>
+ <g>
+  <circle cx="-10.394" cy="187.95" r="26.962" fill="#c21fa3"/>
+  <circle cx="74.461" cy="54.717" r="26.962" fill="#29b8ad"/>
+  <circle cx="151.95" cy="188.9" r="26.962" fill="#dfea29"/>
+  <circle cx="71.06" cy="-98.741" r="26.962" fill="#29b8ad"/>
+  <circle cx="144.01" cy="-43.557" r="26.962" fill="#29b8ad"/>
+  <circle cx="-83.155" cy="208.93" r="26.962" fill="#c21fa3"/>
+  <circle cx="-33.262" cy="257.69" r="26.962" fill="#c21fa3"/>
+ </g>
+ <g fill="#dfea29">
+  <circle cx="214.69" cy="248.62" r="26.962"/>
+  <circle cx="245.31" cy="335.18" r="26.962"/>
+  <circle cx="299.36" cy="286.42" r="26.962"/>
+ </g>
+ <g fill="none" stroke-width="5">
+  <g stroke="#dfea29">
+   <path d="m274.74 275.43-35.427-15.816"/>
+   <path d="m236.32 309.76-12.634-35.72"/>
+   <path d="m195.16 230.03-23.684-22.543"/>
+  </g>
+  <path d="m129.41 174.1-20.896-13.723" stroke="#855c5c"/>
+  <path d="m75.275 100.08-0.33017-18.407" stroke="#855c5c"/>
+  <path d="m73.864 27.762-2.2067-99.548" stroke="#29b8ad"/>
+  <path d="m90.036 32.709 38.398-54.258" stroke="#29b8ad"/>
+  <path d="m13.062 174.66 29.041-16.458" stroke="#855c5c"/>
+  <path d="m-24.861 232.07 6.0656-18.498" stroke="#c21fa3"/>
+  <path d="m-36.301 195.42-20.947 6.0393" stroke="#c21fa3"/>
+  <path d="m150.35-17.351 58.002 239.76" stroke="#7fa786"/>
+  <path d="m187.75 249.6-194.06 7.0999" stroke="#d6aa6b"/>
+  <path d="m4.0891 165.21 55.889-87.754" stroke="#615c85"/>
+ </g>
+</svg>

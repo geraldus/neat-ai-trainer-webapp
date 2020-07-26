@@ -31,6 +31,6 @@ postRunNewPopR = do
             (\(i, g) -> IndividualAI { aiId = i, aiFitness = 0.0, genome = g })
             (zip [1 .. fromIntegral populationSize] pop)
     let task = AIPopulation
-            { populationNiches = [Species { individuals = ais }] }
+            { populationNiches = [Species { individuals = ais, speciesId = 1 }] }
     liftIO . atomically $ writeTChan ch task
     selectRep . provideRep . pure $ object ["status" .= ("ok" :: Text)]

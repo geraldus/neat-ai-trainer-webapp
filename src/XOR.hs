@@ -9,10 +9,10 @@ biasPhi = 0.8
 basicGenome :: Double -> Double -> Double -> Genotype
 basicGenome w0 w1 w2 = Genome
     { nodes =
-        [ Node { nodeNum = 0, nodeType = Bias,   activated = True }
-        , Node { nodeNum = 1, nodeType = Sensor, activated = False }
-        , Node { nodeNum = 2, nodeType = Sensor, activated = False }
-        , Node { nodeNum = 4, nodeType = Output, activated = False } ]
+        [ Node { nodeNum = 0, nodeType = Bias,   activation = 1.0 }
+        , Node { nodeNum = 1, nodeType = Sensor, activation = 0.0 }
+        , Node { nodeNum = 2, nodeType = Sensor, activation = 0.0 }
+        , Node { nodeNum = 4, nodeType = Output, activation = 0.0 } ]
     , geneConnections =
         [ Gene
             { geneIn = 0
@@ -34,13 +34,13 @@ basicGenome w0 w1 w2 = Genome
             , geneInnov = 3 }
         ] }
 
-xorGenome :: Double -> (Double, Bool) -> (Double, Bool) -> Genotype
+xorGenome :: Double -> (Double, Double) -> (Double, Double) -> Genotype
 xorGenome w0 (w1, i1) (w2, i2) = Genome
     { nodes =
-        [ Node { nodeNum = 0, nodeType = Bias,   activated = True }
-        , Node { nodeNum = 1, nodeType = Sensor, activated = i1 }
-        , Node { nodeNum = 2, nodeType = Sensor, activated = i2 }
-        , Node { nodeNum = 4, nodeType = Output, activated = False } ]
+        [ Node { nodeNum = 0, nodeType = Bias,   activation = 1.0 }
+        , Node { nodeNum = 1, nodeType = Sensor, activation = i1 }
+        , Node { nodeNum = 2, nodeType = Sensor, activation = i2 }
+        , Node { nodeNum = 4, nodeType = Output, activation = 0.0 } ]
     , geneConnections =
         [ Gene
             { geneIn = 0

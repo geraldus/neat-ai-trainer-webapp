@@ -11,7 +11,7 @@ import           Import
 
 import           Solve
 import           Text.Pretty.Simple (pPrint)
-import           Type.Genetics
+import           Genetics.Type
 import           XOR
 
 
@@ -34,8 +34,3 @@ postRunNewPopR = do
             { populationNiches = [Species { individuals = ais }] }
     liftIO . atomically $ writeTChan ch task
     selectRep . provideRep . pure $ object ["status" .= ("ok" :: Text)]
-
-
-isActiveOutput :: Node -> Bool
-isActiveOutput (Node _ Output True) = True
-isActiveOutput _                    = False

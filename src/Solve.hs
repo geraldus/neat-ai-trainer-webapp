@@ -7,7 +7,7 @@ module Solve where
 import           ClassyPrelude.Yesod
 import           Control.Concurrent  (threadDelay)
 import           Data.List           (foldl)
-import           Type.Genetics
+import           Genetics.Type
 
 
 -- * Constants

@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Type.Genetics where
+module Genetics.Type where
 
 import           Data.Aeson.TH
 
@@ -10,9 +10,9 @@ data NodeGeneType =
 deriveJSON defaultOptions ''NodeGeneType
 
 data Node = Node
-    { nodeNum   :: Int
-    , nodeType  :: NodeGeneType
-    , activated :: Bool }
+    { nodeNum    :: Int
+    , nodeType   :: NodeGeneType
+    , activation :: Double }
     deriving (Show, Eq, Ord)
 deriveJSON defaultOptions ''Node
 
@@ -39,7 +39,10 @@ data IndividualAI = IndividualAI
     , genome    :: Genotype }
 deriveJSON defaultOptions ''IndividualAI
 
-data Species = Species { individuals :: [IndividualAI] }
+data Species = Species
+    { individuals :: [IndividualAI]
+    , speciesId :: Int
+    }
 deriveJSON defaultOptions ''Species
 
 data AIPopulation = AIPopulation { populationNiches :: [Species] }

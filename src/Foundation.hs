@@ -14,7 +14,7 @@ import           Database.Persist.Sql (ConnectionPool, runSqlPool)
 import           Import.NoFoundation
 import           Text.Hamlet          (hamletFile)
 import           Text.Jasmine         (minifym)
-import           Type.Genetics
+import           Genetics.Type
 
 -- Used only when in "auth-dummy-login" setting is enabled.
 import           Yesod.Auth.Dummy

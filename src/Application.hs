@@ -45,7 +45,7 @@ import           System.Log.FastLogger                (defaultBufSize,
                                                        newStdoutLoggerSet,
                                                        toLogStr)
 import           Text.Pretty.Simple                   (pPrint)
-import           Type.Genetics
+import           Genetics.Type
 
 -- Import all relevant handler modules here.
 -- Don't forget to add new modules to your cabal file!

@@ -1,7 +1,7 @@
 module XOR where
 
 import           System.Random (randomRIO)
-import           Type.Genetics
+import           Genetics.Type
 
 biasPhi :: Double
 biasPhi = 0.8

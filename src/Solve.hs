@@ -7,19 +7,8 @@ module Solve where
 import           ClassyPrelude.Yesod
 import           Control.Concurrent  (threadDelay)
 import           Data.List           (foldl)
+import           Genetics.Defaults   (solutionTimeout)
 import           Genetics.Type
-
-
--- * Constants
-
-solutionTimeout :: Int
-solutionTimeout = 1 * 1000 * 1000
-
-populationCoefficient :: Int
-populationCoefficient = 1
-
-populationSize :: Integer
-populationSize = fromIntegral populationCoefficient * 150
 
 
 -- * Solution

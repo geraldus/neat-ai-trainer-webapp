@@ -1,7 +1,11 @@
 module XOR where
 
-import           System.Random (randomRIO)
+import           Control.Concurrent (newMVar)
+import           Genetics.Defaults
 import           Genetics.Type
+import           System.Random      (randomRIO)
+import Data.Map (Map, fromList)
+
 
 biasPhi :: Double
 biasPhi = 0.8
@@ -34,6 +38,19 @@ basicGenome w0 w1 w2 = Genome
             , geneInnov = 3 }
         ] }
 
+minimalInnovations :: Map Int (Int, Int)
+minimalInnovations = fromList
+    [ (1, (0, 4))
+    , (2, (1, 4))
+    , (3, (2, 4)) ]
+
+minimalConnInnovMap :: Map (Int, Int) Int
+minimalConnInnovMap = fromList
+    [ ((0, 4), 1)
+    , ((1, 4), 2)
+    , ((2, 4), 3) ]
+
+
 xorGenome :: Double -> (Double, Double) -> (Double, Double) -> Genotype
 xorGenome w0 (w1, i1) (w2, i2) = Genome
     { nodes =
@@ -62,9 +79,34 @@ xorGenome w0 (w1, i1) (w2, i2) = Genome
             , geneInnov = 3 }
         ] }
 
+xorGenome' :: (Double, Double) -> (Double, Double) -> Genotype
+xorGenome' = xorGenome biasPhi
 
-createPopulation ::  Int -> IO [Genotype]
-createPopulation popSize = mapM (const randomAI) [1..popSize]
+createPopulation :: IO AIPopulation
+createPopulation = do
+    pop   <- createBasicGenotypeGroup (fromIntegral populationSize)
+    mv    <- newMVar 2
+    innov <- newMVar minimalInnovations
+    conns <- newMVar minimalConnInnovMap
+    innId <- newMVar (length minimalInnovations + 1)
+    -- FIXME: Split group into niches
+    let ais = map mkIndividual (zip [1 .. fromIntegral populationSize] pop)
+    return $ AIPopulation
+        { populationNiches = [Species { individuals = ais, nicheId = 1 }]
+        , nextNicheId = mv
+        , innovations = innov
+        , connMap = conns
+        , lastInnovationId = innId }
+
+mkIndividual :: (Int, Genotype) -> IndividualAI
+mkIndividual (i, g) = IndividualAI
+    { aiId = i
+    , aiFitness = 0.0
+    , aiCorrectedFitness = 0.0
+    , genome = g }
+
+createBasicGenotypeGroup ::  Int -> IO [Genotype]
+createBasicGenotypeGroup popSize = mapM (const randomAI) [1..popSize]
   where
     randomAI = do
         w1 <- randomRIO (-1, 1)

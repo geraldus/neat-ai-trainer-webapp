@@ -8,11 +8,7 @@
 module Handler.Home where
 
 import           Import
-
-import           Solve
-import           Text.Pretty.Simple (pPrint)
-import           Genetics.Type
-import           XOR
+import           XOR    (createPopulation)
 
 
 getHomeR :: Handler Html
@@ -25,12 +21,6 @@ getHomeR = do
 postRunNewPopR :: Handler TypedContent
 postRunNewPopR = do
     ch <- appTasks <$> getYesod
-    pop <- liftIO $ createPopulation (fromIntegral populationSize)
-    liftIO $ pPrint pop
-    let ais = map
-            (\(i, g) -> IndividualAI { aiId = i, aiFitness = 0.0, genome = g })
-            (zip [1 .. fromIntegral populationSize] pop)
-    let task = AIPopulation
-            { populationNiches = [Species { individuals = ais, speciesId = 1 }] }
+    task <- liftIO createPopulation
     liftIO . atomically $ writeTChan ch task
     selectRep . provideRep . pure $ object ["status" .= ("ok" :: Text)]

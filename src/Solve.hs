@@ -51,8 +51,8 @@ runXORSpecies ch ai = do
 
     fitness rs = map f' rs
 
-    f' ((Nothing, _), _) = 1.0
-    f' ((Just [], _), _) = 1.0
+    f' ((Nothing, _), _)         = 1.0
+    f' ((Just [], _), _)         = 1.0
     f' ((Just ((_, v):_), _), e) = abs $ e - v
 
 

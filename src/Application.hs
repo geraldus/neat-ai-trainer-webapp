@@ -73,8 +73,9 @@ makeFoundation appSettings = do
     appStatic <-
         (if appMutableStatic appSettings then staticDevel else static)
         (appStaticDir appSettings)
-    appSpeciesUpdate <- newBroadcastTChanIO
-    appTasks <- newBroadcastTChanIO
+    appSpeciesUpdateChannel <- newBroadcastTChanIO
+    appTasks                <- newBroadcastTChanIO
+    appLastPopulationResult <- newEmptyMVar
 
     -- We need a log function to create a connection pool. We need a connection
     -- pool to create our foundation. And we need our foundation to get a

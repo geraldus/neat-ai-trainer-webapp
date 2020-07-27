@@ -1,8 +1,11 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 module Genetics.Type where
 
+import           Control.Concurrent (MVar)
+import           Data.Aeson         (ToJSON (..), object, (.=))
 import           Data.Aeson.TH
-
+import           Data.Map           (Map)
 
 data NodeGeneType =
     Bias | Sensor | Output | Hidden
@@ -34,19 +37,35 @@ data Genotype = Genome
 deriveJSON defaultOptions ''Genotype
 
 data IndividualAI = IndividualAI
-    { aiId      :: Int
-    , aiFitness :: Double
-    , genome    :: Genotype }
+    { aiId               :: Int
+    , aiFitness          :: Double
+    , aiCorrectedFitness :: Double
+    , genome             :: Genotype
+    }
+    deriving Show
 deriveJSON defaultOptions ''IndividualAI
 
 data Species = Species
     { individuals :: [IndividualAI]
-    , speciesId :: Int
+    , nicheId     :: Int
+    , stagnant    :: Int
+    , lastFitness :: Double
     }
+    deriving Show
 deriveJSON defaultOptions ''Species
 
-data AIPopulation = AIPopulation { populationNiches :: [Species] }
-deriveJSON defaultOptions ''AIPopulation
+data AIPopulation = AIPopulation
+    { populationNiches :: [Species]
+    , nextNicheId      :: MVar Int
+    , innovations      :: MVar (Map Int (Int, Int))
+    , connMap          :: MVar (Map (Int, Int) Int)
+    , lastInnovationId :: MVar Int
+    }
+instance Show AIPopulation where
+    show = show . populationNiches
+
+instance ToJSON AIPopulation where
+    toJSON p = object [ "niches" .= toJSON (populationNiches p) ]
 
 
 genomeInputGenes :: Genotype -> [Node]

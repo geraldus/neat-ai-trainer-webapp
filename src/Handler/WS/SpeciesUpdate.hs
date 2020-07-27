@@ -8,7 +8,7 @@ import           Yesod.WebSockets
 
 getSpeciesUpdateNoticesWS :: Handler TypedContent
 getSpeciesUpdateNoticesWS = do
-    chan <- appSpeciesUpdate <$> getYesod
+    chan <- appSpeciesUpdateChannel <$> getYesod
     source <- atomically $ dupTChan chan
     webSockets $ forever $ do
         v <- atomically $ readTChan source

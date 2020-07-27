@@ -13,6 +13,19 @@ import           Genetics.Type
 
 -- * Solution
 
+runGen :: TChan Value -> AIPopulation -> IO AIPopulation
+runGen noticeCh p = do
+    let pNiches = populationNiches p
+    let pIndivids = map individuals pNiches
+    res <- mapM
+        (runNiche noticeCh) pNiches
+    let scoreMap = map resToFitness (zip pIndivids res)
+        scoredNiches = zipWith (\n inds -> n { individuals = inds }) pNiches scoreMap
+    return $ p { populationNiches = scoredNiches }
+  where
+    resToFitness :: ([IndividualAI], [Double]) -> [IndividualAI]
+    resToFitness (inds, rs) = zipWith (\i r -> i { aiFitness = r}) inds rs
+
 runNiche :: TChan Value -> Species -> IO [Double]
 runNiche ch = mapM (runXORSpecies ch) . individuals
 

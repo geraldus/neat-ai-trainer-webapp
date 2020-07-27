@@ -21,9 +21,12 @@ module Application
 
 import           Control.Concurrent                   (forkIO)
 import           Control.Monad.Logger                 (liftLoc, runLoggingT)
+import           Data.List                            (findIndex, (!!))
 import           Database.Persist.Postgresql          (createPostgresqlPool,
                                                        pgConnStr, pgPoolSize,
                                                        runSqlPool)
+import           Genetics.Niches
+import           Genetics.Type
 import           Import
 import           Language.Haskell.TH.Syntax           (qLocation)
 import           Network.HTTP.Client.TLS              (getGlobalManager)
@@ -40,12 +43,12 @@ import           Network.Wai.Middleware.RequestLogger (Destination (Logger),
                                                        destination,
                                                        mkRequestLogger,
                                                        outputFormat)
-import           Solve                                (runNiche)
+import           Solve                                (runGen, runNiche)
 import           System.Log.FastLogger                (defaultBufSize,
                                                        newStdoutLoggerSet,
                                                        toLogStr)
+import           System.Random                        (Random (randomRIO))
 import           Text.Pretty.Simple                   (pPrint)
-import           Genetics.Type
 
 -- Import all relevant handler modules here.
 -- Don't forget to add new modules to your cabal file!
@@ -97,7 +100,7 @@ makeFoundation appSettings = do
     -- Perform database migration using our application's logging settings.
     runLoggingT (runSqlPool (runMigration migrateAll) pool) logFunc
 
-    _ <- forkIO $ aiPopulationRunner appTasks appSpeciesUpdate
+    _ <- forkIO $ aiPopulationRunner 0 appTasks appSpeciesUpdateChannel
 
     -- Return the foundation
     return $ mkFoundation pool
@@ -205,16 +208,24 @@ db :: ReaderT SqlBackend Handler a -> IO a
 db = handler . runDB
 
 
-aiPopulationRunner :: TChan AIPopulation -> TChan Value -> IO ()
-aiPopulationRunner readCh noticeCh = do
+aiPopulationRunner mv readCh noticeCh = do
     hSetBuffering stdout LineBuffering
     ch <- atomically $ dupTChan readCh
     forever $ do
         p <- atomically $ readTChan ch
-        pPrint "Running next population"
-        res <- mapM
-            (runNiche noticeCh)
-            (populationNiches p)
-        pPrint res
+        putStrLn "Running next population"
+        scoredPop <- distributeFitness <$> runGen noticeCh p
+        -- TODO: Maybe it's better to fetch champions first and correct
+        --       fitness after than
+        nichesMap <- mapM nicheEmptyMap (populationNiches p)
+        let scoredAIs = concatMap individuals (populationNiches scoredPop)
+        nRepMap <- separateByNiche (nextNicheId p) scoredAIs nichesMap
+        mapM selection nRepMap
+        pPrint $ map (\n -> (nRepId n, length (nRepList n), nRepFitness n)) nRepMap
+        -- let (champs, _) = champions $ populationNiches scoredPop
+        -- pPrint $
         return ()
     return ()
+
+selection _ = return ()
+--   where

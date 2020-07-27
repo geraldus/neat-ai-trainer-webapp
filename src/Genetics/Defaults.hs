@@ -25,7 +25,7 @@ deltaT :: Double
 deltaT = 3.0
 
 delta :: Double -> Double -> Double -> Double -> Double
-delta e d n w = c1*e/n + c2*d/n + c3*w
+delta d e n w = c1*e/n + c2*d/n + c3*w
 
 
 stagnantGenerationsLimit :: Integer

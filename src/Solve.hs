@@ -115,14 +115,14 @@ haveUnspreadSignal g =
 signalActivations :: Genotype -> ([(Node, Double)], [Node], [[Gene]])
 signalActivations g = (candidateActivations, activeNodes, activeCons)
   where
-    cons'                      = geneConnections g
+    cons'                      = filter geneEnabled (geneConnections g)
     activeNodes                = genomeActiveNodes g
     (activeNodeCons, _)        = groupNodeCons isConnInput activeNodes cons' True
     (_, activeCons)            = unzip activeNodeCons
     (candidateNodeTriggers, _) = groupNodeCons isConnTrigger (nodes g) (concat activeCons) False
     candidateVectors           = map (findTriggerValues activeNodes) candidateNodeTriggers
-    candidateActivations        = map react candidateVectors
-    react (n, iv, wv)      = (n, (sigmoidTransfer' $ inputWeightProduct iv wv))
+    candidateActivations       = map react candidateVectors
+    react (n, iv, wv)          = (n, (sigmoidTransfer' $ inputWeightProduct iv wv))
 
 findTriggerValues :: [Node] -> (a, [Gene]) -> (a, [Double], [Double])
 findTriggerValues vals (n, cons') = (n, weights, inputs)

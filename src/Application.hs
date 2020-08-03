@@ -17,14 +17,17 @@ module Application
     -- * for GHCI
     , handler
     , db
+    -- * for tests
+    , runPopulation
     ) where
 
 import           Control.Concurrent                   (forkIO)
 import           Control.Monad.Logger                 (liftLoc, runLoggingT)
-import           Data.List                            (findIndex, (!!))
 import           Database.Persist.Postgresql          (createPostgresqlPool,
                                                        pgConnStr, pgPoolSize,
                                                        runSqlPool)
+import           Genetics.Crossover                   (selectiveCrossover)
+import           Genetics.Defaults                    (populationSize)
 import           Genetics.Niches
 import           Genetics.Type
 import           Import
@@ -43,11 +46,10 @@ import           Network.Wai.Middleware.RequestLogger (Destination (Logger),
                                                        destination,
                                                        mkRequestLogger,
                                                        outputFormat)
-import           Solve                                (runGen, runNiche)
+import           Solve                                (runGen)
 import           System.Log.FastLogger                (defaultBufSize,
                                                        newStdoutLoggerSet,
                                                        toLogStr)
-import           System.Random                        (Random (randomRIO))
 import           Text.Pretty.Simple                   (pPrint)
 
 -- Import all relevant handler modules here.
@@ -78,7 +80,7 @@ makeFoundation appSettings = do
         (appStaticDir appSettings)
     appSpeciesUpdateChannel <- newBroadcastTChanIO
     appTasks                <- newBroadcastTChanIO
-    appLastPopulationResult <- newEmptyMVar
+    appLastPopulationResult <- newEmptyTMVarIO
 
     -- We need a log function to create a connection pool. We need a connection
     -- pool to create our foundation. And we need our foundation to get a
@@ -100,7 +102,7 @@ makeFoundation appSettings = do
     -- Perform database migration using our application's logging settings.
     runLoggingT (runSqlPool (runMigration migrateAll) pool) logFunc
 
-    _ <- forkIO $ aiPopulationRunner 0 appTasks appSpeciesUpdateChannel
+    _ <- forkIO $ aiPopulationRunner appLastPopulationResult appTasks appSpeciesUpdateChannel
 
     -- Return the foundation
     return $ mkFoundation pool
@@ -208,24 +210,87 @@ db :: ReaderT SqlBackend Handler a -> IO a
 db = handler . runDB
 
 
+aiPopulationRunner :: TMVar AIPopulation -> TChan AIPopulation -> TChan Value -> IO ()
 aiPopulationRunner mv readCh noticeCh = do
     hSetBuffering stdout LineBuffering
     ch <- atomically $ dupTChan readCh
     forever $ do
         p <- atomically $ readTChan ch
-        putStrLn "Running next population"
-        scoredPop <- distributeFitness <$> runGen noticeCh p
-        -- TODO: Maybe it's better to fetch champions first and correct
-        --       fitness after than
-        nichesMap <- mapM nicheEmptyMap (populationNiches p)
-        let scoredAIs = concatMap individuals (populationNiches scoredPop)
-        nRepMap <- separateByNiche (nextNicheId p) scoredAIs nichesMap
-        mapM selection nRepMap
-        pPrint $ map (\n -> (nRepId n, length (nRepList n), nRepFitness n)) nRepMap
-        -- let (champs, _) = champions $ populationNiches scoredPop
-        -- pPrint $
+        scoredPop <- runPopulation noticeCh p
+        let nodeMV      = nextNodeId p
+            innovMV     = nextInnovationId p
+            connInnovMV = connMap p
+            aiIdMV      = nextAIIdMV p
+            nicheMV     = nextNicheId p
+        niches' <- selection nodeMV innovMV connInnovMV aiIdMV nicheMV (populationNiches scoredPop)
+        atomically $ writeTChan noticeCh (object
+            [ "size"    .= toJSON (length (concat (map nicheIndividuals niches')))
+            , "fitness" .= toJSON (sum (map aiFitness (concatMap nicheIndividuals niches')))
+            , "niches"  .= toJSON niches'
+            ])
+        atomically $ putTMVar mv (p { populationNiches = niches' })
         return ()
     return ()
 
-selection _ = return ()
---   where
+runPopulation :: TChan Value -> AIPopulation -> IO AIPopulation
+runPopulation noticeCh p = do
+    scoredPop <- distributeFitness <$> runGen noticeCh p
+    let scoredNiches = map reScoreNiche (populationNiches scoredPop)
+    return $ scoredPop { populationNiches = scoredNiches }
+  where
+
+reScoreNiche :: Species -> Species
+reScoreNiche n = n
+    { nicheLastFitness      = lastFitness
+    , nicheFitness          = f
+    , nicheCorrectedFitness = f'
+    , nicheStagnantGens     = s
+    }
+  where
+    lastFitness = nicheFitness n
+    f           = sum (map aiFitness (nicheIndividuals n))
+    f'          = sum (map aiCorrectedFitness (nicheIndividuals n))
+    stg         = nicheStagnantGens n
+    s           = if lastFitness > f then stg + 1 else 0
+
+selection :: MVar Int
+          -> MVar Int
+          -> MVar (Map (Int, Int) Int)
+          -> MVar Int
+          -> MVar Int
+          -> [Species]
+          -> IO [Species]
+selection nodeMV innovMV connInnovMV aiIdMV nicheMV scoredNiches = do
+    ais <- concat <$> mapM sel (zip scoredNiches [0..])
+    ais' <- if length ais < fromIntegral populationSize
+        then do
+            selectiveCrossover' (length ais)
+        else return ais
+    recreateNiches nicheMV ais' scoredNiches
+  where
+    sel (n, i) = do
+        let fPop = sum $ map
+                (\n' ->
+                    (/) (nicheCorrectedFitness n')
+                        (fromIntegral (length (nicheIndividuals n'))))
+                scoredNiches
+        let (nInit, nTail) = splitAt i scoredNiches
+            otherSpecies =
+                map genome . concatMap nicheIndividuals $ nInit ++ drop 1 nTail
+        crossoverNiche nodeMV innovMV connInnovMV aiIdMV fPop otherSpecies n
+
+    selectiveCrossover' d = do
+        let all' = map genome $ concat (map nicheIndividuals scoredNiches)
+        gs <- selectiveCrossover (fromIntegral populationSize - d) all' all'
+        ids <- mapM mkIndividual gs
+        return ids
+
+    mkIndividual g = do
+        aiId' <- takeMVar aiIdMV
+        putMVar aiIdMV (aiId' + 1)
+        return $ IndividualAI
+            { aiId = aiId'
+            , aiFitness = 0
+            , aiCorrectedFitness = 0
+            , genome = g
+            }

@@ -8,7 +8,7 @@
 module Handler.Home where
 
 import           Import
-import           XOR    (createPopulation)
+import           XOR    (createBasicPopulation)
 
 
 getHomeR :: Handler Html
@@ -20,7 +20,13 @@ getHomeR = do
 
 postRunNewPopR :: Handler TypedContent
 postRunNewPopR = do
-    ch <- appTasks <$> getYesod
-    task <- liftIO createPopulation
-    liftIO . atomically $ writeTChan ch task
+    y  <- getYesod
+    let ch = appTasks y
+        st = appLastPopulationResult y
+    pop <- atomically $ tryTakeTMVar st
+    case pop of
+        Nothing -> do
+            task <- liftIO createBasicPopulation
+            liftIO . atomically $ writeTChan ch task
+        Just p  -> liftIO . atomically $ writeTChan ch p
     selectRep . provideRep . pure $ object ["status" .= ("ok" :: Text)]

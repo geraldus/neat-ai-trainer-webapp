@@ -37,7 +37,7 @@ data App = App
     , appHttpManager          :: Manager
     , appLogger               :: Logger
     , appSpeciesUpdateChannel :: TChan Value
-    , appLastPopulationResult :: MVar AIPopulation
+    , appLastPopulationResult :: TMVar AIPopulation
     , appTasks                :: TChan AIPopulation
     }
 

@@ -1,10 +1,38 @@
 module Genetics.Crossover where
 
-import           Data.List         (nub, sortBy)
-import           Data.Ord          (comparing)
-import           Genetics.Defaults (geneDisableProbability)
+import           ClassyPrelude.Yesod (pack)
+import           Data.List           (nub, sortBy)
+import           Data.Ord            (comparing)
+import           Genetics.Defaults   (geneDisableProbability,
+                                      interspeciesMatingRate)
 import           Genetics.Type
-import           System.Random     (randomIO, randomRIO)
+import           System.Random       (randomIO, randomRIO)
+
+
+selectiveCrossover :: Int -> [Genotype] -> [Genotype] -> IO [Genotype]
+selectiveCrossover n relative distant = do
+    if n <= 0
+        then return []
+        else do
+            idx <- randomRIO (0, length relative - 1)
+            -- let (relInit, relTail) = splitAt idx relative
+            let g = relative !! idx
+            -- c <- cross g (relInit ++ drop 1 relTail) distant
+            -- Чтобы избежать случаев ошибок неверного индекса, когда в нише
+            -- один только экземпляр
+            c <- cross g relative distant
+            cs <- selectiveCrossover (n - 1) relative distant
+            return $ c:cs
+  where
+    cross g ns os = do
+        rnd <- randomRIO (0.0, 1.0)
+        if rnd <= interspeciesMatingRate && not (null os)
+            then do
+                idx <- randomRIO (0, length os - 1)
+                crossover g (os !! idx)
+            else do
+                idx <- randomRIO (0, length ns - 1)
+                crossover g (ns !! idx)
 
 
 crossover :: Genotype -> Genotype -> IO Genotype

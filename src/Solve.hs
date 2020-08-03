@@ -16,18 +16,21 @@ import           Genetics.Type
 runGen :: TChan Value -> AIPopulation -> IO AIPopulation
 runGen noticeCh p = do
     let pNiches = populationNiches p
-    let pIndivids = map individuals pNiches
+    let pIndivids = map nicheIndividuals pNiches
     res <- mapM
         (runNiche noticeCh) pNiches
     let scoreMap = map resToFitness (zip pIndivids res)
-        scoredNiches = zipWith (\n inds -> n { individuals = inds }) pNiches scoreMap
+        scoredNiches = zipWith
+                            (\n inds -> n { nicheIndividuals = inds })
+                            pNiches
+                            scoreMap
     return $ p { populationNiches = scoredNiches }
   where
     resToFitness :: ([IndividualAI], [Double]) -> [IndividualAI]
     resToFitness (inds, rs) = zipWith (\i r -> i { aiFitness = r}) inds rs
 
 runNiche :: TChan Value -> Species -> IO [Double]
-runNiche ch = mapM (runXORSpecies ch) . individuals
+runNiche ch = mapM (runXORSpecies ch) . nicheIndividuals
 
 runXORSpecies :: TChan Value -> IndividualAI -> IO Double
 runXORSpecies ch ai = do
@@ -54,9 +57,6 @@ runXORSpecies ch ai = do
     let expect = [0.0, 1.0, 1.0, 0.0]
     let matrix = zip results expect
     let f   = (4 - (sum . fitness $ matrix))**2
-    atomically $ writeTChan ch (object [ "results" .= toJSON [r1', r2', r3', r4']
-                                       , "fitness" .= f
-                                       ])
     return f
   where
     head' []    = error "Expected non empty state"

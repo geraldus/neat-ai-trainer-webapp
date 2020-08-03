@@ -46,10 +46,13 @@ data IndividualAI = IndividualAI
 deriveJSON defaultOptions ''IndividualAI
 
 data Species = Species
-    { individuals :: [IndividualAI]
-    , nicheId     :: Int
-    , stagnant    :: Int
-    , lastFitness :: Double
+    { nicheIndividuals      :: [IndividualAI]
+    , nicheId               :: Int
+    , nicheStagnantGens     :: Int
+    , nicheFitness          :: Double
+    , nicheLastFitness      :: Double
+    , nicheSample           :: IndividualAI
+    , nicheCorrectedFitness :: Double
     }
     deriving Show
 deriveJSON defaultOptions ''Species
@@ -57,9 +60,10 @@ deriveJSON defaultOptions ''Species
 data AIPopulation = AIPopulation
     { populationNiches :: [Species]
     , nextNicheId      :: MVar Int
-    , innovations      :: MVar (Map Int (Int, Int))
+    , nextNodeId       :: MVar Int
+    , nextInnovationId :: MVar Int
     , connMap          :: MVar (Map (Int, Int) Int)
-    , lastInnovationId :: MVar Int
+    , nextAIIdMV       :: MVar Int
     }
 instance Show AIPopulation where
     show = show . populationNiches

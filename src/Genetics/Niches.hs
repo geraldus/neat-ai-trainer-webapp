@@ -9,57 +9,40 @@ import           Genetics.Type
 import           System.Random      (Random (randomRIO))
 
 
-nicheEmptyMap :: Species -> IO NicheRep
-nicheEmptyMap (Species inds nichedId _ _) = do
-    i <- randomRIO (1, l)
-    let rep = inds !! (i - 1)
-    return $ NicheRep
-        { nRepId = nichedId
-        , nRepSample = genome rep
-        , nRepList = []
-        , nRepFitness = 0 }
   where
     l = length inds
 
-separateByNiche :: MVar Int -> [IndividualAI] -> [NicheRep] -> IO [NicheRep]
-separateByNiche _  []     nrs = return nrs
-separateByNiche mv (i:is) nrs = do
-    (rep', _) <- addToNiche mv nrs i
-    separateByNiche mv is rep'
 
-addToNiche :: MVar Int -> [NicheRep] -> IndividualAI -> IO ([NicheRep], NicheRep)
+addToNiche ::
+    MVar Int -> [Species] -> IndividualAI -> IO [Species]
 addToNiche mv ns i = do
-    let idx' = findNicheRepIndex ns i
+    let idx' = findNicheIndex ns i
     case idx' of
         Just idx -> do
+            -- putStrLn "ADD to niche"
             let n    = ns !! idx
-                list = nRepList n
-                l    = fromIntegral $ length list
-                f    = nRepFitness n
-                n' = n { nRepList = i:list
-                       , nRepFitness = (f * l + aiCorrectedFitness i) / (l + 1)
-                       }
+                list = nicheIndividuals n
+                f    = nicheFitness n
+                f'   = nicheCorrectedFitness n
+                n'   = n { nicheIndividuals      = i:list
+                         , nicheFitness          = f + aiFitness i
+                         , nicheCorrectedFitness = f' + aiCorrectedFitness i
+                         }
                 (nHead, _:nTail) = splitAt idx ns
-            return $ (nHead ++ [n'] ++ nTail, n')
+            return $ (nHead ++ [n'] ++ nTail)
         Nothing -> do
             nId <- takeMVar mv
             putMVar mv (nId + 1)
-            let n' = NicheRep
-                        { nRepId      = nId
-                        , nRepSample  = genome i
-                        , nRepList    = [i]
-                        , nRepFitness = aiCorrectedFitness i
+            let n' = Species
+                        { nicheId               = nId
+                        , nicheSample           = i
+                        , nicheIndividuals      = [i]
+                        , nicheLastFitness      = 0.0
+                        , nicheFitness          = aiFitness i
+                        , nicheStagnantGens     = 0
+                        , nicheCorrectedFitness = aiCorrectedFitness i
                         }
-            return (ns ++ [n'], n')
-
-data NicheRep = NicheRep
-    { nRepId      :: Int
-    , nRepSample  :: Genotype
-    , nRepList    :: [IndividualAI]
-    , nRepFitness :: Double
-    }
-    deriving Show
-
+            return (ns ++ [n'])
 
 
 champions :: [Species] -> ([IndividualAI], [Species])
@@ -76,17 +59,18 @@ champions ns = (champs, specs)
     largeEnough = (> 5) . length . individuals
 
 takeChampion :: Species -> (Maybe IndividualAI, Species)
-takeChampion s = (ch, s { individuals = inds})
+takeChampion s = (ch, s { nicheIndividuals = inds})
   where
-   (ch, inds) = nicheChampion s
+   (ch, inds) = maybeFirstIndividual s
 
-nicheChampion :: Species -> (Maybe IndividualAI, [IndividualAI])
-nicheChampion s = case individuals s of
+maybeFirstIndividual :: Species -> (Maybe IndividualAI, [IndividualAI])
+maybeFirstIndividual s = case nicheIndividuals s of
     []        -> (Nothing, [])
     (ai:rest) -> (Just ai, rest)
 
 sortNiche :: Species -> Species
-sortNiche s = s { individuals = sortBy (flip (comparing aiFitness)) (individuals s) }
+sortNiche s =
+    s { nicheIndividuals = sortByFitness (nicheIndividuals s) }
 
 bothOfSameNiche :: Genotype -> Genotype -> Bool
 bothOfSameNiche g1 g2 = dlt < deltaT
@@ -101,57 +85,26 @@ bothOfSameNiche g1 g2 = dlt < deltaT
     w = avgWeightDiff ms
     dlt = delta (fromIntegral d) (fromIntegral e) (fromIntegral n) w
 
-findNicheRepIndex :: [NicheRep] -> IndividualAI -> Maybe Int
-findNicheRepIndex ns i =
-    findIndex (\n -> bothOfSameNiche (genome i) (nRepSample n)) ns
 
-
--- | Crossovers and Offsprings
-
-crossoverMap :: Genotype -> Genotype -> ([(Gene, Gene)], [Gene], [Gene])
-crossoverMap g1 g2 = crossovers
-                        (geneConnections g1)
-                        (geneConnections g2)
-                        ([], [], [])
-
-
-crossovers :: [Gene] -> [Gene] -> ([(Gene, Gene)], [Gene], [Gene]) -> ([(Gene, Gene)], [Gene], [Gene])
-crossovers [] [] acc = acc
-crossovers ns [] (ms, djs, exs) = (ms, djs, reverse ns ++ exs)
-crossovers [] ns (ms, djs, exs) = (ms, djs, reverse ns ++ exs)
-crossovers (g1:g1s) (g2:g2s) (ms, djs, exs)
-    | geneInnov g1 == geneInnov g2 = crossovers g1s g2s ((g1, g2):ms, djs, exs)
-    | geneInnov g1 <  geneInnov g2 =
-        if null g1s
-            then (ms, djs, reverse g2s ++ g2:g1:exs)
-            else crossovers g1s (g2:g2s) (ms, g1:djs, exs)
-    | geneInnov g1 >  geneInnov g2 =
-        if null g2s
-            then (ms, djs, reverse g1s ++ g1:g2:exs)
-            else crossovers (g1:g1s) g2s (ms, g2:djs, exs)
-    | otherwise = error "Seems not to be a case"
-
-
--- nicheOffsprings n pop =
+-- * Utils
 
 distributeFitness :: AIPopulation -> AIPopulation
 distributeFitness p = p { populationNiches = ns' }
   where
     ns = populationNiches p
 
-    pop = concatMap individuals ns
+    pop = concatMap nicheIndividuals ns
 
     ns' = map (distributeNiche pop) ns
 
-
 distributeNiche :: [IndividualAI] -> Species -> Species
-distributeNiche pop n = n { individuals = corrected }
+distributeNiche pop n = n { nicheIndividuals = corrected }
   where
-    cfs = map (\i -> correctedFitness i pop) (individuals n)
+    cfs = map (\i -> correctedFitness i pop) (nicheIndividuals n)
 
     corrected = map
         (\(f, i) -> i { aiCorrectedFitness = f })
-        (zip cfs (individuals n))
+        (zip cfs (nicheIndividuals n))
 
 
 correctedFitness :: IndividualAI -> [IndividualAI] -> Double

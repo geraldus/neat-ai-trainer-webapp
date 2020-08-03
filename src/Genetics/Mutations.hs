@@ -10,6 +10,7 @@ import           Data.Map           (insert)
 import           Data.Maybe         (catMaybes)
 import           Data.Ord           (comparing)
 import           System.Random      (randomIO, randomRIO)
+import           Text.Pretty.Simple (pPrint)
 
 
 mutateStruct ::
@@ -19,7 +20,7 @@ mutateStruct nodeMV innovMV connInnovMV g = do
     let pTot = smNodeAdditionProbability + smLinkAdditionProbability
     if rnd < smNodeAdditionProbability / pTot
         then mutateAddNode nodeMV innovMV connInnovMV g
-        else mutateAddConnection innovMV connInnovMV g
+        else mutateAddConnection nodeMV innovMV connInnovMV g
 
 mutateAddNode ::
     MVar Int -> MVar Int -> MVar (Map (Int, Int) Int) -> Genotype -> IO Genotype
@@ -151,8 +152,8 @@ findDivisions a b cs = catMaybes $ map justDivision mayABDivs
 
 
 mutateAddConnection ::
-    MVar Int -> MVar (Map (Int, Int) Int) -> Genotype -> IO Genotype
-mutateAddConnection innovMV connInnovMV g = do
+    MVar Int -> MVar Int -> MVar (Map (Int, Int) Int) -> Genotype -> IO Genotype
+mutateAddConnection nodeMV innovMV connInnovMV g = do
     -- First select output for new connection
     -- There is no sense to make connections to Sensors or Bias nodes
     let ns = nodes g
@@ -164,8 +165,9 @@ mutateAddConnection innovMV connInnovMV g = do
         then return g
         else do
             w      <- randomRIO (-1.0, 1.0)
-            outIdx <- randomRIO (0, nonBSCount - 1)
-            let oNode = nonBSNodes !! outIdx
+            let possibleOutputs = unconnectedNodes g
+            outIdx <- randomRIO (0, length possibleOutputs - 1)
+            let oNode = possibleOutputs !! outIdx
                 o     = nodeNum oNode
             -- Now we need to create NEW connection, so we have to
             -- filter candidates for new connection input
@@ -223,3 +225,22 @@ mutateWeights' g = do
     biases = filter (\(Node _ t _)-> t == Bias) (nodes g)
 
     isBiasCon c = geneIn c `elem` (map nodeNum biases)
+
+
+unconnectedNodes :: Genotype -> [Node]
+unconnectedNodes g = fst $ unzip $ filter (\(_, cn) -> cn < lNodes) ncMap
+  where
+    lNodes = length (nodes g)
+
+    nonBSNodes = filter nonBS (nodes g)
+
+    ncMap = map cons' nonBSNodes
+
+    cons' n =
+        let cs = filter (\c -> geneOut c == nodeNum n) (geneConnections g)
+        in (n, length cs)
+
+
+    nonBS (Node _ Bias _)   = False
+    nonBS (Node _ Sensor _) = False
+    nonBS _                 = True

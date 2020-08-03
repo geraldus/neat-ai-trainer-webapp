@@ -35,11 +35,17 @@ stagnantGenerationsLimit = 15
 weightMutationProbability :: Double
 weightMutationProbability = 0.8
 
+uniformPerturbationWeightMutationProbability :: Double
+uniformPerturbationWeightMutationProbability = 0.9
+
 randomWeightMutationProbability :: Double
 randomWeightMutationProbability = 0.1
 
 popMutationFactor :: Double
 popMutationFactor = 0.25
+
+learningRate :: Double
+learningRate = 0.1
 
 
 -- | Maximum difference in weights when uniform perturbation applied.
@@ -66,3 +72,6 @@ lgLinkAdditionProbability = 0.3
 
 solutionTimeout :: Int
 solutionTimeout = 1 * 1000 * 1000
+
+championNicheMinCount :: Int
+championNicheMinCount = 5

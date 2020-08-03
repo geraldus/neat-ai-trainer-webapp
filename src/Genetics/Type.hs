@@ -69,7 +69,7 @@ instance ToJSON AIPopulation where
 
 
 genomeInputGenes :: Genotype -> [Node]
-genomeInputGenes g = filter isInputGene (nodes g)
+genomeInputGenes g = filter isInputNode (nodes g)
 
 genomeInputConnections :: Genotype -> [Gene]
 genomeInputConnections g = filter isInputConn (geneConnections g)
@@ -78,5 +78,23 @@ genomeInputConnections g = filter isInputConn (geneConnections g)
 
         inputGeneNums = map nodeNum $ genomeInputGenes g
 
-isInputGene :: Node -> Bool
-isInputGene g = nodeType g == Sensor
+isInputNode :: Node -> Bool
+isInputNode g = nodeType g == Sensor
+
+isBiasConn :: Node -> Gene -> Bool
+isBiasConn (Node n Bias _) c = geneIn c == n
+isBiasConn _ _               = False
+
+isAnyActiveNode :: Node -> Bool
+isAnyActiveNode (Node _ _ a) = a /= 0
+
+isNonBiasActiveNode :: Node -> Bool
+isNonBiasActiveNode (Node _ Bias _) = False
+isNonBiasActiveNode (Node _ _ a)    = a /= 0
+
+
+isConnInput ::  Node -> Gene -> Bool
+isConnInput n с = geneIn с == nodeNum n
+
+isConnTrigger :: Node -> Gene -> Bool
+isConnTrigger n c = geneOut c == nodeNum n

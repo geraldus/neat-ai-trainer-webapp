@@ -28,7 +28,7 @@ delta :: Double -> Double -> Double -> Double -> Double
 delta d e n w = c1*e/n + c2*d/n + c3*w
 
 
-stagnantGenerationsLimit :: Integer
+stagnantGenerationsLimit :: Int
 stagnantGenerationsLimit = 15
 
 
